@@ -1,0 +1,6 @@
+#ignore all excel files
+*.xlsx
+*.xls
+
+#ignore node modules
+node_modules/
