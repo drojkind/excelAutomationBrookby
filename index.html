@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Hello World!</title>
+</head>
+<style>
+  body {
+    background-color: black;
+  }
+
+  .header{
+    color: white;
+  }
+
+  #drag-file {
+    background-color: blue;
+    color: white;
+    text-align: center;
+    width: 300px;
+    height: 300px;
+  }
+</style>
+
+<body>
+  <h1 class="header">EXCEL converter</h1>
+  <div id="drag-file">
+    <p>Drag your files here</p>
+  </div>
+
+  <script>
+    (function() {
+      var holder = document.getElementById('drag-file');
+
+      holder.ondragover = () => {
+        return false;
+      };
+
+      holder.ondragleave = () => {
+        return false;
+      };
+
+      holder.ondragend = () => {
+        return false;
+      };
+
+      holder.ondrop = (e) => {
+        e.preventDefault();
+
+        for (let f of e.dataTransfer.files) {
+          console.log('File(s) you dragged here: ', f.path)
+          convertJson(f.path);
+        }
+
+        return false;
+      };
+    })();
+  </script>
+</body>
+
+</html>
