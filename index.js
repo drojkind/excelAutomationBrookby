@@ -16,7 +16,6 @@ let dateArrayConverted = [];
 
 let jsonOutput = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]);
 //Date keys allow us to see when new JSON data for a new date starts and ends.
-console.log(jsonOutput);
 jsonOutput.map(data => data.__EMPTY_1).forEach(function(data2, index) {
 
   if (_.includes(data2, 'Date Out :') === true) {
