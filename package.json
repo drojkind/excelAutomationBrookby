@@ -9,6 +9,7 @@
   "license": "ISC",
   "dependencies": {
     "convert-excel-to-json": "^1.3.0",
+    "json2csv": "^4.0.2",
     "lodash": "^4.17.5",
     "moment": "^2.21.0"
   },

@@ -3,19 +3,26 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Hello World!</title>
+  <title>Excel converter</title>
 </head>
 <style>
   body {
-    background-color: black;
+    background-color: #6f6f6e;
+    font-family: Arial, Helvetica, sans-serif;
   }
 
-  .header{
+  .header {
     color: white;
   }
 
+  .dragText {
+    text-align: center;
+    vertical-align: middle;
+    line-height: 300px;
+  }
+
   #drag-file {
-    background-color: blue;
+    background-color: #0e6020;
     color: white;
     text-align: center;
     width: 300px;
@@ -24,9 +31,11 @@
 </style>
 
 <body>
-  <h1 class="header">EXCEL converter</h1>
+  <h1 class="header">EXCEL CONVERTER</h1>
   <div id="drag-file">
-    <p>Drag your files here</p>
+    <div id="drag-dotted">
+      <p class="dragText">Drag your files here...</p>
+    </div>
   </div>
 
   <script>
@@ -49,14 +58,14 @@
         e.preventDefault();
 
         for (let f of e.dataTransfer.files) {
-          console.log('File(s) you dragged here: ', f.path)
-          convertJson(f.path);
+          dragData(f.path);
         }
 
         return false;
       };
     })();
   </script>
+  <script src="./index.js"></script>
 </body>
 
 </html>
