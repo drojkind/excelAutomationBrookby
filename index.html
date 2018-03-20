@@ -51,6 +51,7 @@
       };
 
       holder.ondragend = () => {
+        console.log('DRAG HAS ENDED...');
         return false;
       };
 
@@ -58,14 +59,17 @@
         e.preventDefault();
 
         for (let f of e.dataTransfer.files) {
-          dragData(f.path);
+
+          Promise.all([dragData(f.path)]).then((values) => {
+            console.log('function has finished...', values);
+          });
         }
 
         return false;
       };
     })();
   </script>
-  <script src="./index.js"></script>
+  <script src="./utils/index.js"></script>
 </body>
 
 </html>
