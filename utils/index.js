@@ -1,161 +1,213 @@
-'use strict';
-const excelToJson = require('convert-excel-to-json');
 const fs = require('fs');
 const _ = require('lodash');
 const moment = require('moment');
 const Json2csvParser = require('json2csv').Parser;
-// const fields = ['date', 'quarry', 'null1', 'null2', 'docket', 'jobNo', 'null3', 'delivery', 'null4', 'null5', 'null6', 'rego','null0', 'product', 'weight', 'startTime', 'endTime', 'null7', 'null8', 'null9', 'startKm', 'endKm'];
+
 const fields = ['date', 'quarry', 'docket', 'jobNo', 'delivery', 'rego', 'product', 'weight', 'startTime', 'endTime', 'startKm', 'endKm'];
 const currentPath = process.cwd();
 
-var XLSX = require('xlsx');
+const XLSX = require('xlsx');
 
 const brookbyKeys = require('./utils/keys/brookby.json');
-
 
 let dateKeys = []; // Key showing start index for a date range and the date in format ['1', '3-Mar']
 let dateArray = [];
 let selectedDateArray = [];
 let dateArrayConverted = [];
 
-
+// We get the path for the file that was dragged onto the app.
 function dragData(data) {
-  var workbook = XLSX.readFile(data);
-  var sheet_name_list = workbook.SheetNames;
-  let jsonOutput = XLSX.utils.sheet_to_json(workbook.Sheets[sheet_name_list[0]]);
+  const workbook = XLSX.readFile(data);
+  const sheetNameList = workbook.SheetNames;
+  const jsonOutput = XLSX.utils.sheet_to_json(workbook.Sheets[sheetNameList[0]]);
 
-  //Date keys allow us to see when new JSON data for a new date starts and ends.
-  jsonOutput.map(data => data.__EMPTY_1).forEach(function(data2, index) {
-
+  // Date keys allow us to see when new JSON data for a new date starts and ends.
+  jsonOutput.map(data => data.__EMPTY_1).forEach((data2, index) => {
     if (_.includes(data2, 'Date Out :') === true) {
-      //We convert date to Excel sheet standard...
-      //We use regex to parse out date from the string.
+      // We convert date to Excel sheet standard...
+      // We use regex to parse out date from the string.
       dateKeys.push([index, moment(data2.match(/\d{1,2}\D\d{1,2}\D(\d{4})/g)[0], 'DD/MM/YYYY').format('D-MMM')]);
     }
   });
 
-  dateKeys.forEach(function(data, index) {
-    var indexIs = index + 1;
-    //We can go two items forward from the first record, and two items back fromt the last.
-    // For the last record we go two items forward and then 4 items back from the last item.
-    if (index + 1 !== dateKeys.length) {
-      splitDateArray(jsonOutput.slice(dateKeys[index][0] + 2, dateKeys[indexIs][0] - 2), dateKeys[index][1]);
-    } else {
-      splitDateArray(jsonOutput.slice(dateKeys[index][0] + 2, jsonOutput.length - 4), dateKeys[index][1]);
-    }
-  })
-  //We push split array into dateArray
-  function splitDateArray(data, index) {
+  // We push split array into dateArray
+  function splitDateArray(data) {
     dateArray.push(data);
   }
 
-  //We select the date we want to output for our excel sheet via outputData function
-  //Currently we iterate through each date and make a large file, date selection could be built into the app.
-  dateKeys.forEach(function(data) {
-    console.log(data[1])
-    outputData(data[1]);
-  })
+  /**
+   * We can go two items forward from the first record, and two items back fromt the last.
+   * For the last record we go two items forward and then 4 items back from the last item.
+   */
+  dateKeys.forEach((data, index) => {
+    const indexIs = index + 1;
+    if (index + 1 !== dateKeys.length) {
+      splitDateArray(
+        jsonOutput.slice(
+          dateKeys[index][0] + 2,
+          dateKeys[indexIs][0] - 2,
+        ),
+        dateKeys[index][1],
+      );
+    } else {
+      splitDateArray(
+        jsonOutput.slice(
+          dateKeys[index][0] + 2,
+          jsonOutput.length - 4,
+        ),
+        dateKeys[index][1],
+      );
+    }
+  });
 
   function outputData(date) {
-    selectedDateArray.push(dateArray[_.findIndex(dateKeys, function(o) {
-      return o[1] == date;
-    })])
-    let data = selectedDateArray[0][0];
-    selectedDateArray[0].forEach(function(data, index) {
-      //let data = selectedDateArray[0][0];
-      console.log(data, index);
-      dateArrayConverted.push({
-        date: date,
-        quarry: 'KB',
-        docket: data.Docket,
-        jobNo: data['Order Name'].substring(0, 4),
-        delivery: 'E',
-        rego: data.Vehicle,
-        product: data['Product Name'],
-        weight: parseWeight(data.Net),
-        startTime: roundTime(data['Time Out'], "floor"),
-        endTime: getNextTime(data, index),
-        startKm: 'no data',
-        endKm: 'no data',
-      })
-    })
-    //We get the end time for the next trip. Showing when the truck returned to the quarry.
-    //Refactor should include GPS data to correlate information...
-    function getNextTime(data, index){
-      console.log('this is data', data);
-      let sliceFilter = _.filter(selectedDateArray[0].slice(index+1,selectedDateArray[0].length), { 'Vehicle': data.Vehicle});
-      if(sliceFilter.length !== 0){
-        return roundTime(sliceFilter[0]['Time In'], "ceil");
-      } else {
-        return "MANUAL ENTRY";
-      }
-      // console.log(sliceFilter);
-      // console.log(selectedDateArray[0][index]);
-      // console.log(selectedDateArray[0].slice(index,selectedDateArray[0].length));
-      // console.log(index);
-      // console.log(selectedDateArray[0].length);
-      // return roundTime(data['Time In']);
+    /**
+     * getDistance - Gets distance between a quarry and a site.
+     *
+     * @param {string} site 4 digit string.
+     * @return {type}      description
+     */
+    function getDistance(site) {
+      return fetch('https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=Washington,DC&destinations=New+York+City,NY&key=AIzaSyD3DrGL7mk0IXupL8BWqoq0pRofJdOeIBc').then(response =>
+        // Convert to JSON
+        response.json()).then(j =>
+        // Yay, `j` is a JavaScript object
+        j.rows[0].elements[0].distance.value);
     }
 
-    // console.log("GET KEY BY VALUE!!!!! - ",getKeyByValue(brookbyKeys, "MANARC 65"));
+    selectedDateArray.push(dateArray[_.findIndex(dateKeys, o => o[1] === date)]);
+    const data = selectedDateArray[0][0];
 
-    function getKeyByValue(object, value) {
-      return Object.keys(object).or(o => o[key] === value)
-    }
-
-    function productNameMatch(name) {
-      //console.log(brookbyKeys;
-      //console.log(brookbyKeys[1]);
-    }
-
-    //We take a weight string and set '.' in the correct position depending on if it is 5 or 4 characters...
-    function parseWeight(weight) {
-      if (weight.length === 5) {
-        return weight.substring(0, 2) + '.' + weight.substring(2, 4);
-      } else if (weight.length === 4) {
-        return weight.substring(0, 1) + '.' + weight.substring(1, 3);
-      } else {
-        return 'WEIGHT ERROR!'
-      }
-    }
-    //We round the time. Currently rounding down.
-    //Takes in (time, height). Time being a 
-    function roundTime(time, height) {
-      console.log(time);
-      var date = moment(time, 'HH:mm:ss');
-      var roundedDate = round(date, moment.duration(15, "minutes"), height);
-      return roundedDate.format('hh:mm:ss A');
-    }
 
     function round(date, duration, method) {
       return moment(Math[method]((+date) / (+duration)) * (+duration));
     }
 
-  } //OutPutdata Function
-  //console.log('WE ARE DONE!');
+    /**
+     * roundTime - We round the time. Up or down.
+     * Should refactor to round up or down based on closest 15 min.
+     * @param  {string} time Receives time.
+     * @param  {string} height Take in variable 'floor' or 'height'
+     * @return {string} return rounded date in the correct format.
+     */
+    function roundTime(time, height) {
+      console.log(time);
+      const date = moment(time, 'HH:mm:ss');
+      const roundedDate = round(date, moment.duration(15, 'minutes'), height);
+      return roundedDate.format('hh:mm:ss A');
+    }
 
-  function onlyUnique(value, index, self) {
-    return self.indexOf(value) === index;
+    /**
+     * getNextTime - We get the end time for the next trip.
+     * Showing when the truck returned to the quarry.
+     * Refactor should include GPS data to correlate information.
+     *
+     * @param  {string} data  description
+     * @param  {int} index description
+     * @return {string} Return rounded time.
+     */
+    function getNextTime(data, index) {
+      const sliceFilter = _.filter(selectedDateArray[0]
+        .slice(index + 1, selectedDateArray[0].length), {
+        Vehicle: data.Vehicle,
+      });
+      if (sliceFilter.length !== 0) {
+        return roundTime(sliceFilter[0]['Time In'], 'ceil');
+      }
+      return 'MANUAL ENTRY';
+    }
+
+    /**
+     * productNameMatch - We match the keys from brookby with our products.
+     * If no key is found we use the default value...
+     *
+     * @param  {string} name We insert a product name.
+     * @return {type} Return the product matched from brookby.json.
+     * If no match is found we return the name that was input.
+     */
+    function productNameMatch(name) {
+      if (brookbyKeys[name] === undefined) {
+        return name;
+      }
+      return brookbyKeys[name];
+    }
+
+    /**
+     * parseWeight - We take a weight string and set '.' in the correct
+     * position depending on if it is 5 or 4 characters...
+     *
+     * @param  {string} weight pass in weight string.
+     * @return {string} with the correct decimal point notation.
+     */
+    function parseWeight(weight) {
+      if (weight.length === 5) {
+        return `${weight.substring(0, 2)}.${weight.substring(2, 4)}`;
+      } else if (weight.length === 4) {
+        return `${weight.substring(0, 1)}.${weight.substring(1, 3)}`;
+      }
+      return 'WEIGHT ERROR!';
+    }
+
+    selectedDateArray[0].forEach((data, index) => {
+      Promise.all([getDistance('data')]).then((distance) => {
+        dateArrayConverted.push({
+          date,
+          quarry: 'KB',
+          docket: data.Docket,
+          jobNo: data['Order Name'].substring(0, 4),
+          delivery: 'E',
+          rego: data.Vehicle,
+          product: productNameMatch(data['Product Name']),
+          weight: parseWeight(data.Net),
+          startTime: roundTime(data['Time Out'], 'floor'),
+          endTime: getNextTime(data, index),
+          startKm: 0,
+          endKm: distance[0],
+        });
+      });
+    });
+    return Promise.resolve('Resolved');
   }
-  //Instantiate Json2Csv and set headers via fields.
-  const json2csvParser = new Json2csvParser({
-    fields
+
+  /**
+   * We select the date we want to output for our excel sheet via outputData function
+   * Currently we iterate through each date and make a large file,
+   * date selection could be built into the app.
+   */
+  let forCount = 0;
+  dateKeys.forEach((data, index) => {
+    forCount += 1;
+    outputData(data[1]);
+    // We build csv when loop has finished...
+    if (forCount === index + 1) {
+      console.log('EQUAL TRIGGER!!!');
+      // buildcsv();
+    }
   });
-  //Lodash sort function by date and rego.
+
+
+  /**
+   * Instantiate Json2Csv and set headers via fields.
+   */
+  const json2csvParser = new Json2csvParser({
+    fields,
+  });
+
   const csv = json2csvParser.parse(_.sortBy(dateArrayConverted, ['date', 'rego']));
-  fs.writeFile(currentPath + "//data-export-" + moment().format('YYYY-MM-DDTHH:mm:ss.SSS') + ".csv", csv, function(err) {
+
+  fs.writeFile(`${currentPath}//data-export-${moment().format('YYYY-MM-DDTHH:mm:ss.SSS')}.csv`, csv, (err) => {
     if (err) {
       throw err;
-      return Promise.reject('Rejected');
     } else {
-      console.log("The file was saved!");
-      //After we have succesfully written our file we wipe data from our arrays.
-      dateKeys = []; // Key showing start index for a date range and the date in format ['1', '3-Mar']
+      console.log('The file was saved!');
+      // After we have succesfully written our file we wipe data from our arrays.
+      // Key showing start index for a date range and the date in format ['1', '3-Mar']
+      dateKeys = [];
       dateArray = [];
       selectedDateArray = [];
       dateArrayConverted = [];
     }
   });
-  //We return a res
+
   return Promise.resolve('Resolved');
 }
