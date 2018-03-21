@@ -5,7 +5,6 @@ const Json2csvParser = require('json2csv').Parser;
 
 const fields = ['date', 'quarry', 'docket', 'jobNo', 'delivery', 'rego', 'product', 'weight', 'startTime', 'endTime', 'startKm', 'endKm'];
 const currentPath = process.cwd();
-
 const XLSX = require('xlsx');
 
 const brookbyKeys = require('./utils/keys/brookby.json');
@@ -78,7 +77,6 @@ function dragData(data) {
     selectedDateArray.push(dateArray[_.findIndex(dateKeys, o => o[1] === date)]);
     const data = selectedDateArray[0][0];
 
-
     function round(date, duration, method) {
       return moment(Math[method]((+date) / (+duration)) * (+duration));
     }
@@ -94,7 +92,7 @@ function dragData(data) {
       console.log(time);
       const date = moment(time, 'HH:mm:ss');
       const roundedDate = round(date, moment.duration(15, 'minutes'), height);
-      return roundedDate.format('hh:mm:ss A');
+      return Promise.resolve(roundedDate.format('hh:mm:ss A'));
     }
 
     /**
@@ -112,9 +110,9 @@ function dragData(data) {
         Vehicle: data.Vehicle,
       });
       if (sliceFilter.length !== 0) {
-        return roundTime(sliceFilter[0]['Time In'], 'ceil');
+        return Promise.resolve(roundTime(sliceFilter[0]['Time In'], 'ceil'));
       }
-      return 'MANUAL ENTRY';
+      return Promise.resolve('MANUAL ENTRY');
     }
 
     /**
@@ -127,9 +125,9 @@ function dragData(data) {
      */
     function productNameMatch(name) {
       if (brookbyKeys[name] === undefined) {
-        return name;
+        return Promise.resolve(name);
       }
-      return brookbyKeys[name];
+      return Promise.resolve(brookbyKeys[name]);
     }
 
     /**
@@ -141,15 +139,21 @@ function dragData(data) {
      */
     function parseWeight(weight) {
       if (weight.length === 5) {
-        return `${weight.substring(0, 2)}.${weight.substring(2, 4)}`;
+        return Promise.resolve(`${weight.substring(0, 2)}.${weight.substring(2, 4)}`);
       } else if (weight.length === 4) {
-        return `${weight.substring(0, 1)}.${weight.substring(1, 3)}`;
+        return Promise.resolve(`${weight.substring(0, 1)}.${weight.substring(1, 3)}`);
       }
-      return 'WEIGHT ERROR!';
+      return Promise.resolve('WEIGHT ERROR!');
     }
 
     selectedDateArray[0].forEach((data, index) => {
-      Promise.all([getDistance('data')]).then((distance) => {
+      Promise.all([
+        getDistance('data'),
+        getNextTime(data, index),
+        roundTime(data['Time Out'], 'floor'),
+        parseWeight(data.Net),
+        productNameMatch(data['Product Name']),
+      ]).then((promise) => {
         dateArrayConverted.push({
           date,
           quarry: 'KB',
@@ -157,12 +161,12 @@ function dragData(data) {
           jobNo: data['Order Name'].substring(0, 4),
           delivery: 'E',
           rego: data.Vehicle,
-          product: productNameMatch(data['Product Name']),
-          weight: parseWeight(data.Net),
-          startTime: roundTime(data['Time Out'], 'floor'),
-          endTime: getNextTime(data, index),
+          product: promise[4],
+          weight: promise[3],
+          startTime: promise[2],
+          endTime: promise[1],
           startKm: 0,
-          endKm: distance[0],
+          endKm: promise[0],
         });
       });
     });
@@ -177,37 +181,42 @@ function dragData(data) {
   let forCount = 0;
   dateKeys.forEach((data, index) => {
     forCount += 1;
-    outputData(data[1]);
+    // outputData(data[1]);
     // We build csv when loop has finished...
-    if (forCount === index + 1) {
-      console.log('EQUAL TRIGGER!!!');
-      // buildcsv();
-    }
-  });
-
-
-  /**
-   * Instantiate Json2Csv and set headers via fields.
-   */
-  const json2csvParser = new Json2csvParser({
-    fields,
-  });
-
-  const csv = json2csvParser.parse(_.sortBy(dateArrayConverted, ['date', 'rego']));
-
-  fs.writeFile(`${currentPath}//data-export-${moment().format('YYYY-MM-DDTHH:mm:ss.SSS')}.csv`, csv, (err) => {
-    if (err) {
-      throw err;
+    if (forCount === dateKeys.length) {
+      console.log('IS THIS TRIGGERING ON DATE KEYS AND FOR COUNT MATCH!!??!');
+      outputData(data[1]).then((data) => {
+        exportCsv();
+      });
     } else {
-      console.log('The file was saved!');
-      // After we have succesfully written our file we wipe data from our arrays.
-      // Key showing start index for a date range and the date in format ['1', '3-Mar']
-      dateKeys = [];
-      dateArray = [];
-      selectedDateArray = [];
-      dateArrayConverted = [];
+      outputData(data[1]);
     }
   });
+
+  function exportCsv() {
+    /**
+     * Instantiate Json2Csv and set headers via fields.
+     */
+    const json2csvParser = new Json2csvParser({
+      fields,
+    });
+
+    const csv = json2csvParser.parse(_.sortBy(dateArrayConverted, ['date', 'rego']));
+
+    fs.writeFile(`${currentPath}//data-export-${moment().format('YYYY-MM-DDTHH:mm:ss.SSS')}.csv`, csv, (err) => {
+      if (err) {
+        throw err;
+      } else {
+        console.log('The file was saved!');
+        // After we have succesfully written our file we wipe data from our arrays.
+        // Key showing start index for a date range and the date in format ['1', '3-Mar']
+        dateKeys = [];
+        dateArray = [];
+        selectedDateArray = [];
+        dateArrayConverted = [];
+      }
+    });
+  }
 
   return Promise.resolve('Resolved');
 }

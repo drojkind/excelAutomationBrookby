@@ -59,10 +59,7 @@
         e.preventDefault();
 
         for (let f of e.dataTransfer.files) {
-
-          Promise.all([dragData(f.path)]).then((values) => {
-            console.log('function has finished...', values);
-          });
+          dragData(f.path)
         }
 
         return false;
