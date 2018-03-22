@@ -2,12 +2,15 @@ const fs = require('fs');
 const _ = require('lodash');
 const moment = require('moment');
 const Json2csvParser = require('json2csv').Parser;
+const XLSX = require('xlsx');
+const brookbyKeys = require('./utils/keys/brookby.json');
 
 const fields = ['date', 'quarry', 'docket', 'jobNo', 'delivery', 'rego', 'product', 'weight', 'startTime', 'endTime', 'startKm', 'endKm'];
 const currentPath = process.cwd();
-const XLSX = require('xlsx');
+const json2csvParser = new Json2csvParser({
+  fields,
+});
 
-const brookbyKeys = require('./utils/keys/brookby.json');
 
 let dateKeys = []; // Key showing start index for a date range and the date in format ['1', '3-Mar']
 let dateArray = [];
@@ -59,7 +62,7 @@ function dragData(data) {
     }
   });
 
-  function outputData(date) {
+  function outputData(date, currentCount) {
     /**
      * getDistance - Gets distance between a quarry and a site.
      *
@@ -145,8 +148,10 @@ function dragData(data) {
       }
       return Promise.resolve('WEIGHT ERROR!');
     }
-
-    selectedDateArray[0].forEach((data, index) => {
+    let dateCount = 0;
+    selectedDateArray[currentCount].forEach((data, index) => {
+      console.log('second array index', index);
+      dateCount += 1;
       Promise.all([
         getDistance('data'),
         getNextTime(data, index),
@@ -168,8 +173,17 @@ function dragData(data) {
           startKm: 0,
           endKm: promise[0],
         });
+      }).then(() => {
+        console.log('Every time push ends...');
+        console.log(selectedDateArray.length);
+        console.log(index);
+        console.log(dateCount);
+        console.log(selectedDateArray[selectedDateArray.length - 1].length);
       });
     });
+    console.log(dateCount);
+    console.log(selectedDateArray[0]);
+
     return Promise.resolve('Resolved');
   }
 
@@ -181,25 +195,24 @@ function dragData(data) {
   let forCount = 0;
   dateKeys.forEach((data, index) => {
     forCount += 1;
-    // outputData(data[1]);
     // We build csv when loop has finished...
     if (forCount === dateKeys.length) {
-      console.log('IS THIS TRIGGERING ON DATE KEYS AND FOR COUNT MATCH!!??!');
-      outputData(data[1]).then((data) => {
-        exportCsv();
+      console.log('WE RUNNING');
+      outputData(data[1], index).then((data) => {
+        console.log('PROMISE DATA!!!', data);
+        exportCsv(data);
       });
     } else {
-      outputData(data[1]);
+      outputData(data[1], index);
     }
   });
 
-  function exportCsv() {
+  function exportCsv(data) {
+    console.log(data);
+    console.log(dateArrayConverted);
     /**
      * Instantiate Json2Csv and set headers via fields.
      */
-    const json2csvParser = new Json2csvParser({
-      fields,
-    });
 
     const csv = json2csvParser.parse(_.sortBy(dateArrayConverted, ['date', 'rego']));
 
@@ -209,7 +222,7 @@ function dragData(data) {
       } else {
         console.log('The file was saved!');
         // After we have succesfully written our file we wipe data from our arrays.
-        // Key showing start index for a date range and the date in format ['1', '3-Mar']
+        // Key showing start index for a date range and the date in format ['1', '3-Mar'].
         dateKeys = [];
         dateArray = [];
         selectedDateArray = [];
