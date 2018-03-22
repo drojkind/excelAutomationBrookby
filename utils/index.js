@@ -11,7 +11,6 @@ const json2csvParser = new Json2csvParser({
   fields,
 });
 
-
 let dateKeys = []; // Key showing start index for a date range and the date in format ['1', '3-Mar']
 let dateArray = [];
 let selectedDateArray = [];
@@ -92,7 +91,6 @@ function dragData(data) {
      * @return {string} return rounded date in the correct format.
      */
     function roundTime(time, height) {
-      console.log(time);
       const date = moment(time, 'HH:mm:ss');
       const roundedDate = round(date, moment.duration(15, 'minutes'), height);
       return Promise.resolve(roundedDate.format('hh:mm:ss A'));
@@ -105,11 +103,12 @@ function dragData(data) {
      *
      * @param  {string} data  description
      * @param  {int} index description
+     * @param {string} currentCount the current count of interior array.
      * @return {string} Return rounded time.
      */
-    function getNextTime(data, index) {
-      const sliceFilter = _.filter(selectedDateArray[0]
-        .slice(index + 1, selectedDateArray[0].length), {
+    function getNextTime(data, index, currentCount) {
+      const sliceFilter = _.filter(selectedDateArray[currentCount]
+        .slice(index + 1, selectedDateArray[currentCount].length), {
         Vehicle: data.Vehicle,
       });
       if (sliceFilter.length !== 0) {
@@ -150,11 +149,10 @@ function dragData(data) {
     }
     let dateCount = 0;
     selectedDateArray[currentCount].forEach((data, index) => {
-      console.log('second array index', index);
       dateCount += 1;
       Promise.all([
         getDistance('data'),
-        getNextTime(data, index),
+        getNextTime(data, index, currentCount),
         roundTime(data['Time Out'], 'floor'),
         parseWeight(data.Net),
         productNameMatch(data['Product Name']),
@@ -174,16 +172,14 @@ function dragData(data) {
           endKm: promise[0],
         });
       }).then(() => {
-        console.log('Every time push ends...');
-        console.log(selectedDateArray.length);
-        console.log(index);
-        console.log(dateCount);
-        console.log(selectedDateArray[selectedDateArray.length - 1].length);
+        // When the array has been iterated through we trigger CSV export...
+        if (selectedDateArray.length === currentCount + 1) {
+          if (index + 1 === dateCount) {
+            exportCsv();
+          }
+        }
       });
     });
-    console.log(dateCount);
-    console.log(selectedDateArray[0]);
-
     return Promise.resolve('Resolved');
   }
 
@@ -192,24 +188,12 @@ function dragData(data) {
    * Currently we iterate through each date and make a large file,
    * date selection could be built into the app.
    */
-  let forCount = 0;
+
   dateKeys.forEach((data, index) => {
-    forCount += 1;
-    // We build csv when loop has finished...
-    if (forCount === dateKeys.length) {
-      console.log('WE RUNNING');
-      outputData(data[1], index).then((data) => {
-        console.log('PROMISE DATA!!!', data);
-        exportCsv(data);
-      });
-    } else {
-      outputData(data[1], index);
-    }
+    outputData(data[1], index);
   });
 
-  function exportCsv(data) {
-    console.log(data);
-    console.log(dateArrayConverted);
+  function exportCsv() {
     /**
      * Instantiate Json2Csv and set headers via fields.
      */
