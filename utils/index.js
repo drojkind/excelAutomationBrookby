@@ -4,18 +4,18 @@ const moment = require('moment');
 const Json2csvParser = require('json2csv').Parser;
 const XLSX = require('xlsx');
 const brookbyKeys = require('./utils/keys/brookby.json');
+const coordinates = require('./utils/keys/coordinates.json');
 
-const fields = ['date', 'quarry', 'docket', 'jobNo', 'delivery', 'rego', 'product', 'weight', 'startTime', 'endTime', 'startKm', 'endKm'];
 const currentPath = process.cwd();
-const json2csvParser = new Json2csvParser({
-  fields,
-});
 
 let dateKeys = []; // Key showing start index for a date range and the date in format ['1', '3-Mar']
 let dateArray = [];
 let selectedDateArray = [];
 let dateArrayConverted = [];
 
+function weGetData(data, data2) {
+  return data + data2;
+}
 // We get the path for the file that was dragged onto the app.
 function dragData(data) {
   const workbook = XLSX.readFile(data);
@@ -64,16 +64,18 @@ function dragData(data) {
   function outputData(date, currentCount) {
     /**
      * getDistance - Gets distance between a quarry and a site.
-     *
      * @param {string} site 4 digit string.
-     * @return {type}      description
+     * @return {type}  distance between site and quarry.
+     * Code should use GPS API currently using google...
      */
     function getDistance(site) {
-      return fetch('https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=Washington,DC&destinations=New+York+City,NY&key=AIzaSyD3DrGL7mk0IXupL8BWqoq0pRofJdOeIBc').then(response =>
+      console.log(coordinates[site].Position.Latitude);
+      console.log(coordinates[site].Position.Longitude);
+      console.log(`${coordinates[site].Position.Latitude} ${coordinates[site].Position.Longitude}`);
+      return fetch('https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=-36.969591712031935,175.01331160311304&destinations=' + coordinates[site].Position.Longitude + ',' + coordinates[site].Position.Latitude + '&key=AIzaSyD3DrGL7mk0IXupL8BWqoq0pRofJdOeIBc').then(response =>
         // Convert to JSON
         response.json()).then(j =>
-        // Yay, `j` is a JavaScript object
-        j.rows[0].elements[0].distance.value);
+        parseDistance(j.rows[0].elements[0].distance.value) * 2);
     }
 
     selectedDateArray.push(dateArray[_.findIndex(dateKeys, o => o[1] === date)]);
@@ -96,11 +98,22 @@ function dragData(data) {
       return Promise.resolve(roundedDate.format('hh:mm:ss A'));
     }
 
+    function parseDistance(distance) {
+      const length = distance.toString().length;
+      const string = distance.toString();
+      if (length === 6) {
+        return `${string.substring(0, 3)}.${string.substring(3, 5)}`;
+      } else if (length === 5) {
+        return `${string.substring(0, 2)}.${string.substring(2, 4)}`;
+      } else if (length === 4) {
+        return `${string.substring(0, 1)}.${string.substring(1, 3)}`;
+      }
+    }
+
     /**
      * getNextTime - We get the end time for the next trip.
      * Showing when the truck returned to the quarry.
      * Refactor should include GPS data to correlate information.
-     *
      * @param  {string} data  description
      * @param  {int} index description
      * @param {string} currentCount the current count of interior array.
@@ -120,7 +133,6 @@ function dragData(data) {
     /**
      * productNameMatch - We match the keys from brookby with our products.
      * If no key is found we use the default value...
-     *
      * @param  {string} name We insert a product name.
      * @return {type} Return the product matched from brookby.json.
      * If no match is found we return the name that was input.
@@ -151,7 +163,7 @@ function dragData(data) {
     selectedDateArray[currentCount].forEach((data, index) => {
       dateCount += 1;
       Promise.all([
-        getDistance('data'),
+        getDistance(data['Order Name'].substring(0, 4)),
         getNextTime(data, index, currentCount),
         roundTime(data['Time Out'], 'floor'),
         parseWeight(data.Net),
@@ -197,6 +209,10 @@ function dragData(data) {
     /**
      * Instantiate Json2Csv and set headers via fields.
      */
+    const fields = ['date', 'quarry', 'docket', 'jobNo', 'delivery', 'rego', 'product', 'weight', 'startTime', 'endTime', 'startKm', 'endKm'];
+    const json2csvParser = new Json2csvParser({
+      fields,
+    });
 
     const csv = json2csvParser.parse(_.sortBy(dateArrayConverted, ['date', 'rego']));
 
@@ -214,6 +230,5 @@ function dragData(data) {
       }
     });
   }
-
   return Promise.resolve('Resolved');
 }
