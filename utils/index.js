@@ -66,14 +66,10 @@ function dragData(data) {
      * getDistance - Gets distance between a quarry and a site.
      * @param {string} site 4 digit string.
      * @return {type}  distance between site and quarry.
-     * Code should use GPS API currently using google...
+     * Code should use GPS API currently using google distance API...
      */
     function getDistance(site) {
-      console.log(coordinates[site].Position.Latitude);
-      console.log(coordinates[site].Position.Longitude);
-      console.log(`${coordinates[site].Position.Latitude} ${coordinates[site].Position.Longitude}`);
-      return fetch('https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=-36.969591712031935,175.01331160311304&destinations=' + coordinates[site].Position.Longitude + ',' + coordinates[site].Position.Latitude + '&key=AIzaSyD3DrGL7mk0IXupL8BWqoq0pRofJdOeIBc').then(response =>
-        // Convert to JSON
+      return fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=-36.969591712031935,175.01331160311304&key=AIzaSyD3DrGL7mk0IXupL8BWqoq0pRofJdOeIBc&destinations=${coordinates[site].Position.Longitude},${coordinates[site].Position.Latitude}`).then(response =>
         response.json()).then(j =>
         parseDistance(j.rows[0].elements[0].distance.value) * 2);
     }
@@ -98,8 +94,15 @@ function dragData(data) {
       return Promise.resolve(roundedDate.format('hh:mm:ss A'));
     }
 
+    /**
+     * parseDistance - Takes in raw distance
+     * and returns value with proper spacing.
+     * Should refactor...
+     * @param  {type} distance Raw distance
+     * @return {type} Distance with proper decimal.
+     */
     function parseDistance(distance) {
-      const length = distance.toString().length;
+      const [length] = distance.toString();
       const string = distance.toString();
       if (length === 6) {
         return `${string.substring(0, 3)}.${string.substring(3, 5)}`;
@@ -108,6 +111,7 @@ function dragData(data) {
       } else if (length === 4) {
         return `${string.substring(0, 1)}.${string.substring(1, 3)}`;
       }
+      return 'Incorrect distance.';
     }
 
     /**
