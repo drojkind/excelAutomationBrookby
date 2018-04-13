@@ -166,6 +166,12 @@
       "Longitude": -36.882800421347135,
       "Latitude": 174.83886466828307
     }
+  },
+  "0000": {
+    "Position": {
+      "Longitude": "data below is wrong...",
+      "Latitude": "data below is wrong..."
+    }
   },"9520": {
     "Position": {
       "Longitude": -36.882800421347135,
@@ -179,6 +185,18 @@
     }
   },
   "9519": {
+    "Position": {
+      "Longitude": -36.882800421347135,
+      "Latitude": 174.83886466828307
+    }
+  },
+  "9530": {
+    "Position": {
+      "Longitude": -36.882800421347135,
+      "Latitude": 174.83886466828307
+    }
+  },
+  "9533": {
     "Position": {
       "Longitude": -36.882800421347135,
       "Latitude": 174.83886466828307

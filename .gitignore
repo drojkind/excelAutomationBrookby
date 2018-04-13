@@ -6,5 +6,8 @@
 #ignore node modules
 node_modules
 
-$junk mac files
+#junk mac files
 .DS_Store
+
+#ignore env
+.env
