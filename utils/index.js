@@ -80,9 +80,11 @@ function dragData(data) {
   /**
    * getTripData - description
    *
-   * @param  {int} vehicleId vehicleID mathced from deviceID
-   * @param  {type} date      date you want to search
-   * @return {type}           returns...nothing currenyl
+   * @param  {int} vehicleId   vehicleID mathced from deviceID
+   * @param  {type} date       date you want to search
+   * @param {string} startTime start time of the trip
+   * @param {string} endTime   end time of the trip
+   * @return {type}            returns...nothing currently...
    */
   function getTripData(vehicleId, date, startTime, endTime) {
     let distanceCount = 0;
@@ -123,25 +125,58 @@ function dragData(data) {
             });
           });
         }
+        // We order the array by start time, puts array in correct order after join.
         const orderedArray = _.orderBy(distanceArray, ['StartTime'], ['asc']);
         let startIndex;
         let endIndex;
 
+        // We find where the trip starts and ends within the array.
         _.orderBy(orderedArray).forEach((each, index) => {
           if (startTime >= each.StartTime && startTime <= each.EndTime) {
             startIndex = index;
+            console.log('this is each', each, index);
           }
           if (endTime >= each.StartTime && endTime <= each.EndTime) {
             endIndex = index;
+            console.log('this is other each ', each, index);
           }
         });
 
-        orderedArray.slice(startIndex, endIndex).forEach((each, index) => {
+        // We slice the array to the correct start and end point.
+        const slicedArray = orderedArray.slice(startIndex, endIndex + 1);
+        slicedArray.slice(1, -1).forEach((each, index) => {
           distanceCount += each.Distance;
         });
-        console.log('THIS IS THE TOTAL DISTANCE', distanceCount);
+
+        firstAndLast(startTime, endTime);
+        function firstAndLast(startTime, endTime) {
+          const startDif = moment(startTime);
+          const endDif = moment(endTime);
+
+          const startStart = moment(slicedArray[0].StartTime);
+          const startEnd = moment(slicedArray[0].EndTime);
+
+          const endStart = moment(slicedArray[slicedArray.length - 1].StartTime);
+          const endEnd = moment(slicedArray[slicedArray.length - 1].EndTime);
+
+          const routeStart = startEnd.diff(startStart, 'seconds');
+          const routeEnd = endEnd.diff(endStart, 'seconds');
+
+          const startRouteDif = startDif.diff(startStart, 'seconds');
+          const endRouteDif = endDif.diff(endStart, 'seconds');
+
+          const startCount = ((100 - ((startRouteDif / routeStart) * 100))
+           / 100) * orderedArray[0].Distance;
+          const endCount = ((100 - ((endRouteDif / routeEnd) * 100)) / 100)
+           * orderedArray[orderedArray.length - 1].Distance;
+
+          console.log(startCount);
+          console.log(endCount);
+
+          return startCount + endCount;
+        }
+        console.log('THIS IS THE TOTAL DISTANCE', (distanceCount + firstAndLast(startTime, endTime)).toFixed(2));
       }));
-    console.log('return distance final', distanceCount);
   }
 
 
