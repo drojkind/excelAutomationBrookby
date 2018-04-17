@@ -15,20 +15,19 @@ let dateKeys = []; // Key showing start index for a date range and the date in f
 let dateArray = [];
 let selectedDateArray = [];
 let dateArrayConverted = [];
-let distanceArray = [];
 
-console.log(tripData.map(data => data.TravelledTrip.StartTime));
-tripData.map((data) => {
-  console.log(`
-  TestIsoString: ${new Date('2018-03-26T07:01:35.000').toISOString()}
-  TestIsoString END: ${new Date('2018-03-26T09:58:09.000').toISOString()}
-  Biger than?: ${new Date(data.TravelledTrip.StartTime).toISOString() < new Date(data.TravelledTrip.EndTime).toISOString()}
-  End Time ISO: ${new Date(data.TravelledTrip.EndTime).toISOString()}
-  Start time local: ${new Date(data.TravelledTrip.StartTime)}
-  End time local: ${new Date(data.TravelledTrip.EndTime)}
-  End time: ${new Date(data.TravelledTrip.EndTime) < new Date(data.TravelledTrip.StartTime)}
-  Duration: ${data.TravelledTrip.Duration}`);
-});
+// console.log(tripData.map(data => data.TravelledTrip.StartTime));
+// tripData.map((data) => {
+//   console.log(`
+//   TestIsoString: ${new Date('2018-03-26T07:01:35.000').toISOString()}
+//   TestIsoString END: ${new Date('2018-03-26T09:58:09.000').toISOString()}
+//   Biger than?: ${new Date(data.TravelledTrip.StartTime).toISOString() < new Date(data.TravelledTrip.EndTime).toISOString()}
+//   End Time ISO: ${new Date(data.TravelledTrip.EndTime).toISOString()}
+//   Start time local: ${new Date(data.TravelledTrip.StartTime)}
+//   End time local: ${new Date(data.TravelledTrip.EndTime)}
+//   End time: ${new Date(data.TravelledTrip.EndTime) < new Date(data.TravelledTrip.StartTime)}
+//   Duration: ${data.TravelledTrip.Duration}`);
+// });
 
 // We get the path for the file that was dragged onto the app.
 function dragData(data) {
@@ -48,6 +47,27 @@ function dragData(data) {
   // We push split array into dateArray
   function splitDateArray(data) {
     dateArray.push(data);
+  }
+
+  function dateTimeToUtc(date, time) {
+    console.log('ZEEE DATA', date, time);
+    if (Promise.resolve(time) === time) {
+      console.log('does this ever trigger...');
+      return Promise.resolve(time).then((data) => {
+        console.log(data, ' THIS THE DATA');
+        if (data !== 'MANUAL ENTRY') {
+          const output = `${date}T${data}.000`;
+          console.log(data);
+          console.log(new Date(output).toISOString());
+          return new Date(output).toISOString();
+        }
+        console.log('MANUAL ENTRY');
+        return 'MANUAL ENTRY';
+      });
+    }
+    const output = `${date}T${time}.000`;
+    console.log(new Date(output).toISOString());
+    return Promise.resolve(new Date(output).toISOString());
   }
 
   /**
@@ -74,8 +94,53 @@ function dragData(data) {
       );
     }
   });
+  // console.log(dateTimeToUtc('2018-03-26', '07:01:35'));
+  getTripData(deviceId.JQQ590, '2018-03-26', dateTimeToUtc('2018-03-26', '07:01:35'), dateTimeToUtc('2018-03-26', '09:58:09')).then((data) => {
+    console.log(data);
+  }); // Get trip data function.
+  console.log(getTripData(deviceId.KQQ748, '2018-03-26', dateTimeToUtc('2018-03-26', '07:02:27'), dateTimeToUtc('2018-03-26', '11:56:46')));
+  console.log(getTripData(deviceId.HSR40, '2018-03-26', dateTimeToUtc('2018-03-26', '07:03:15'), dateTimeToUtc('2018-03-26', '08:16:05')));
+  console.log(getTripData(deviceId.HSR40, '2018-03-26', dateTimeToUtc('2018-03-26', '08:29:38'), dateTimeToUtc('2018-03-26', '09:37:49')));
+  console.log(getTripData(deviceId.BBS997, '2018-03-26', dateTimeToUtc('2018-03-26', '08:30:44'), dateTimeToUtc('2018-03-26', '09:48:30')));
+  console.log(getTripData(deviceId.ASD639, '2018-03-26', dateTimeToUtc('2018-03-26', '11:35:01'), dateTimeToUtc('2018-03-26', '12:43:49')), ' THIS IS ASD639 SKRRRRRR');
 
-  getTripData(deviceId.JQQ590, '2018-03-26', '2018-03-25T18:01:35.000Z', '2018-03-25T20:58:09.000Z'); // Get trip data function.
+  /**
+   * firstAndLast - Input start and end time to
+   * @param  {string} startTime trip start time
+   * @param  {string} endTime   trip end time
+   * @return {string}           description
+   */
+  function firstAndLast(startTime, endTime, slicedArray, orderedArray) {
+    // We slice the array to the correct start and end point.
+    console.log('this is startTime', startTime);
+    console.log('this is endTime', endTime);
+    const startDif = moment(startTime);
+    const endDif = moment(endTime);
+
+    const startStart = moment(slicedArray[0].StartTime);
+    const startEnd = moment(slicedArray[0].EndTime);
+
+    const endStart = moment(slicedArray[slicedArray.length - 1].StartTime);
+    const endEnd = moment(slicedArray[slicedArray.length - 1].EndTime);
+
+    const routeStart = startEnd.diff(startStart, 'seconds');
+    const routeEnd = endEnd.diff(endStart, 'seconds');
+
+    const startRouteDif = startDif.diff(startStart, 'seconds');
+    const endRouteDif = endDif.diff(endStart, 'seconds');
+
+    const startCount = ((100 - ((startRouteDif / routeStart) * 100)) /
+      100) * orderedArray[0].Distance;
+    const endCount = ((100 - ((endRouteDif / routeEnd) * 100)) / 100) *
+      orderedArray[orderedArray.length - 1].Distance;
+
+    console.log(startCount);
+    console.log(endCount);
+    if (endTime !== 'MANUAL ENTRY') {
+      return Promise.resolve(startCount + endCount);
+    }
+    return Promise.resolve(0);
+  }
 
   /**
    * getTripData - description
@@ -84,19 +149,22 @@ function dragData(data) {
    * @param  {type} date       date you want to search
    * @param {string} startTime start time of the trip
    * @param {string} endTime   end time of the trip
-   * @return {type}            returns...nothing currently...
+   * @return {int}            total distance traveled.
    */
   function getTripData(vehicleId, date, startTime, endTime) {
+    const distanceArray = [];
     let distanceCount = 0;
-    fetch(`http://webapi.blackhawktracking.com/api/VehicleTrip/Get?vehicleId=${vehicleId}&startDate=${date}T00:00:00.000&endDate=${date}T23:59:59.280&includeGeometries=true&geometryFormat=esrijson`, {
-      headers: {
-        Accept: 'application/json',
-        token: '2A007AC2-4BAD-4625-BF2F-D5DFFE31A44D',
-      },
-      method: 'GET',
-    }).then(response => response.json()).then(j =>
-      j.map(data => data.TravelledTrip).forEach((each, index) => {
-        if (startTime > each.StartTime && endTime < each.EndTime) {
+    const resolvedData = 'chinga tu puta madre...';
+    return Promise.all([startTime, endTime]).then(time =>
+      fetch(`http://webapi.blackhawktracking.com/api/VehicleTrip/Get?vehicleId=${vehicleId}&startDate=${date}T00:00:00.000&endDate=${date}T23:59:59.280&includeGeometries=true&geometryFormat=esrijson`, {
+        headers: {
+          Accept: 'application/json',
+          token: '8B38AA6B-B91B-48D2-A203-0AEB570458F7',
+        },
+        method: 'GET',
+      }).then(response => response.json()).then(j =>
+        j.map(data => data.TravelledTrip).forEach((each, index) => {
+          console.log(j);
           j[index].TravelledTrip.WithinSpeed.forEach((each, index) => {
             distanceArray.push({
               AverageSpeed: each.AverageSpeed,
@@ -124,59 +192,49 @@ function dragData(data) {
               type: 'Off road',
             });
           });
-        }
+        })).then(() => {
         // We order the array by start time, puts array in correct order after join.
         const orderedArray = _.orderBy(distanceArray, ['StartTime'], ['asc']);
+        console.log(orderedArray);
         let startIndex;
         let endIndex;
-
         // We find where the trip starts and ends within the array.
         _.orderBy(orderedArray).forEach((each, index) => {
-          if (startTime >= each.StartTime && startTime <= each.EndTime) {
+          if (time[0] >= each.StartTime && time[0] <= each.EndTime) {
             startIndex = index;
-            console.log('this is each', each, index);
+            console.log(startIndex);
           }
-          if (endTime >= each.StartTime && endTime <= each.EndTime) {
+          if (time[1] >= each.StartTime && time[1] <= each.EndTime) {
             endIndex = index;
-            console.log('this is other each ', each, index);
+            console.log(endIndex);
           }
         });
 
-        // We slice the array to the correct start and end point.
         const slicedArray = orderedArray.slice(startIndex, endIndex + 1);
         slicedArray.slice(1, -1).forEach((each, index) => {
           distanceCount += each.Distance;
         });
 
-        firstAndLast(startTime, endTime);
-        function firstAndLast(startTime, endTime) {
-          const startDif = moment(startTime);
-          const endDif = moment(endTime);
+        console.log('these are the final values!!!!');
+        console.log(distanceCount);
 
-          const startStart = moment(slicedArray[0].StartTime);
-          const startEnd = moment(slicedArray[0].EndTime);
-
-          const endStart = moment(slicedArray[slicedArray.length - 1].StartTime);
-          const endEnd = moment(slicedArray[slicedArray.length - 1].EndTime);
-
-          const routeStart = startEnd.diff(startStart, 'seconds');
-          const routeEnd = endEnd.diff(endStart, 'seconds');
-
-          const startRouteDif = startDif.diff(startStart, 'seconds');
-          const endRouteDif = endDif.diff(endStart, 'seconds');
-
-          const startCount = ((100 - ((startRouteDif / routeStart) * 100))
-           / 100) * orderedArray[0].Distance;
-          const endCount = ((100 - ((endRouteDif / routeEnd) * 100)) / 100)
-           * orderedArray[orderedArray.length - 1].Distance;
-
-          console.log(startCount);
-          console.log(endCount);
-
-          return startCount + endCount;
+        function getTheValues() {
+          console.log(time[0]);
+          console.log(time[1]);
+          if (time[1] === 'MANUAL ENTRY') {
+            console.log('MANUAL ENTRY HITS 71804464');
+            return Promise.resolve('NO DATA');
+          }
+          return firstAndLast(time[0], time[1], slicedArray, orderedArray).then((data) => {
+            console.log(data);
+            return Promise.resolve((distanceCount + data).toFixed(2));
+          });
         }
-        console.log('THIS IS THE TOTAL DISTANCE', (distanceCount + firstAndLast(startTime, endTime)).toFixed(2));
-      }));
+
+        return Promise.resolve(getTheValues());
+      }),
+      // return 'fuck js...';
+    );
   }
 
 
@@ -187,9 +245,6 @@ function dragData(data) {
      * @return {type}  distance between site and quarry.
      * Code should use GPS API currently using google distance API...
      */
-
-    console.log(deviceId['5K511']);
-
     function getDistance(site) {
       console.log(site);
       return fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=-36.969591712031935,175.01331160311304&key=AIzaSyD3DrGL7mk0IXupL8BWqoq0pRofJdOeIBc&destinations=${coordinates[site].Position.Longitude},${coordinates[site].Position.Latitude}`).then(response =>
@@ -247,6 +302,7 @@ function dragData(data) {
      * @return {string} Return rounded time.
      */
     function getNextTime(data, index, currentCount, round) {
+      // console.log(data, index, currentCount, round);
       const sliceFilter = _.filter(selectedDateArray[currentCount]
         .slice(index + 1, selectedDateArray[currentCount].length), {
         Vehicle: data.Vehicle,
@@ -290,8 +346,13 @@ function dragData(data) {
       }
       return Promise.resolve('WEIGHT ERROR!');
     }
+
     let dateCount = 0;
     selectedDateArray[currentCount].forEach((data, index) => {
+      console.log(getNextTime(data, index, currentCount, false));
+      console.log(dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, data['Time Out']));
+      console.log(dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, getNextTime(data, index, currentCount, false)));
+      console.log(getTripData(deviceId[data.Vehicle], `2018-${moment(date).format('MM-DD')}`, dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, data['Time Out']), dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, getNextTime(data, index, currentCount, false))));
       dateCount += 1;
       Promise.all([
         getNextTime(data, index, currentCount, false),
@@ -304,8 +365,11 @@ function dragData(data) {
         roundTime(data['Time Out'], 'floor'),
         parseWeight(data.Net),
         productNameMatch(data['Product Name']),
+        getTripData(deviceId[data.Vehicle], `2018-${moment(date).format('MM-DD')}`, dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, data['Time Out']), dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, getNextTime(data, index, currentCount, false))),
       ]).then((promise) => {
         console.log(deviceId[data.Vehicle]);
+        console.log(data);
+        console.log(`2018-${moment(date).format('MM-DD')}`);
         console.log(moment.utc('2018-03-30T19:47:40.933').valueOf());
         dateArrayConverted.push({
           date,
@@ -320,6 +384,7 @@ function dragData(data) {
           endTime: promise[1],
           startKm: 0,
           endKm: promise[0],
+          bhKM: promise[5],
         });
       }).then(() => {
         // When the array has been iterated through we trigger CSV export...
@@ -346,7 +411,7 @@ function dragData(data) {
     /**
      * Instantiate Json2Csv and set headers via fields.
      */
-    const fields = ['date', 'quarry', 'docket', 'jobNo', 'delivery', 'rego', 'product', 'weight', 'startTime', 'endTime', 'startKm', 'endKm'];
+    const fields = ['date', 'quarry', 'docket', 'jobNo', 'delivery', 'rego', 'product', 'weight', 'startTime', 'endTime', 'startKm', 'endKm', 'bhKM'];
     const json2csvParser = new Json2csvParser({
       fields,
     });
