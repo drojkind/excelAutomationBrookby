@@ -16,19 +16,6 @@ let dateArray = [];
 let selectedDateArray = [];
 let dateArrayConverted = [];
 
-// console.log(tripData.map(data => data.TravelledTrip.StartTime));
-// tripData.map((data) => {
-//   console.log(`
-//   TestIsoString: ${new Date('2018-03-26T07:01:35.000').toISOString()}
-//   TestIsoString END: ${new Date('2018-03-26T09:58:09.000').toISOString()}
-//   Biger than?: ${new Date(data.TravelledTrip.StartTime).toISOString() < new Date(data.TravelledTrip.EndTime).toISOString()}
-//   End Time ISO: ${new Date(data.TravelledTrip.EndTime).toISOString()}
-//   Start time local: ${new Date(data.TravelledTrip.StartTime)}
-//   End time local: ${new Date(data.TravelledTrip.EndTime)}
-//   End time: ${new Date(data.TravelledTrip.EndTime) < new Date(data.TravelledTrip.StartTime)}
-//   Duration: ${data.TravelledTrip.Duration}`);
-// });
-
 // We get the path for the file that was dragged onto the app.
 function dragData(data) {
   const workbook = XLSX.readFile(data);
@@ -45,28 +32,35 @@ function dragData(data) {
   });
 
   // We push split array into dateArray
+  let totalLength = 0;
   function splitDateArray(data) {
+    totalLength += data.length;
     dateArray.push(data);
   }
 
+  let howManyHits = 0;
+  function loadingCalculator(percent) {
+    document.getElementById('drag-file').style.width = ((100 / totalLength) * howManyHits).toFixed(0) * 3 + 'px';
+    document.getElementById('dragText').innerHTML = ((100 / totalLength) * howManyHits).toFixed(0) + '%';
+    const length = dateArray.length;
+    howManyHits += 1;
+    console.log(`${((100 / totalLength) * howManyHits).toFixed(0)}%`);
+    if (((100 / totalLength) * howManyHits).toFixed(0) > 99) {
+      document.getElementById('dragText').innerHTML = 'File converted!';
+    }
+  }
+
   function dateTimeToUtc(date, time) {
-    console.log('ZEEE DATA', date, time);
     if (Promise.resolve(time) === time) {
-      console.log('does this ever trigger...');
       return Promise.resolve(time).then((data) => {
-        console.log(data, ' THIS THE DATA');
         if (data !== 'MANUAL ENTRY') {
           const output = `${date}T${data}.000`;
-          console.log(data);
-          console.log(new Date(output).toISOString());
           return new Date(output).toISOString();
         }
-        console.log('MANUAL ENTRY');
         return 'MANUAL ENTRY';
       });
     }
     const output = `${date}T${time}.000`;
-    console.log(new Date(output).toISOString());
     return Promise.resolve(new Date(output).toISOString());
   }
 
@@ -95,14 +89,6 @@ function dragData(data) {
     }
   });
   // console.log(dateTimeToUtc('2018-03-26', '07:01:35'));
-  getTripData(deviceId.JQQ590, '2018-03-26', dateTimeToUtc('2018-03-26', '07:01:35'), dateTimeToUtc('2018-03-26', '09:58:09')).then((data) => {
-    console.log(data);
-  }); // Get trip data function.
-  console.log(getTripData(deviceId.KQQ748, '2018-03-26', dateTimeToUtc('2018-03-26', '07:02:27'), dateTimeToUtc('2018-03-26', '11:56:46')));
-  console.log(getTripData(deviceId.HSR40, '2018-03-26', dateTimeToUtc('2018-03-26', '07:03:15'), dateTimeToUtc('2018-03-26', '08:16:05')));
-  console.log(getTripData(deviceId.HSR40, '2018-03-26', dateTimeToUtc('2018-03-26', '08:29:38'), dateTimeToUtc('2018-03-26', '09:37:49')));
-  console.log(getTripData(deviceId.BBS997, '2018-03-26', dateTimeToUtc('2018-03-26', '08:30:44'), dateTimeToUtc('2018-03-26', '09:48:30')));
-  console.log(getTripData(deviceId.ASD639, '2018-03-26', dateTimeToUtc('2018-03-26', '11:35:01'), dateTimeToUtc('2018-03-26', '12:43:49')), ' THIS IS ASD639 SKRRRRRR');
 
   /**
    * firstAndLast - Input start and end time to
@@ -112,9 +98,6 @@ function dragData(data) {
    */
   function firstAndLast(startTime, endTime, slicedArray, orderedArray) {
     // We slice the array to the correct start and end point.
-    console.log('this is startTime', startTime);
-    console.log('this is endTime', endTime);
-    console.log(slicedArray[0]);
     const startDif = moment(startTime);
     const endDif = moment(endTime);
 
@@ -135,8 +118,6 @@ function dragData(data) {
     const endCount = ((100 - ((endRouteDif / routeEnd) * 100)) / 100) *
       orderedArray[orderedArray.length - 1].Distance;
 
-    console.log(startCount);
-    console.log(endCount);
     if (endTime !== 'MANUAL ENTRY') {
       return Promise.resolve(startCount + endCount);
     }
@@ -155,7 +136,6 @@ function dragData(data) {
   function getTripData(vehicleId, date, startTime, endTime) {
     const distanceArray = [];
     let distanceCount = 0;
-    const resolvedData = 'chinga tu puta madre...';
     return Promise.all([startTime, endTime]).then(time =>
       fetch(`http://webapi.blackhawktracking.com/api/VehicleTrip/Get?vehicleId=${vehicleId}&startDate=${date}T00:00:00.000&endDate=${date}T23:59:59.280&includeGeometries=true&geometryFormat=esrijson`, {
         headers: {
@@ -165,7 +145,6 @@ function dragData(data) {
         method: 'GET',
       }).then(response => response.json()).then((j) => {
         j.map(data => data.TravelledTrip).forEach((each, index) => {
-          console.log(j);
           j[index].TravelledTrip.WithinSpeed.forEach((each, index) => {
             distanceArray.push({
               AverageSpeed: each.AverageSpeed,
@@ -195,7 +174,6 @@ function dragData(data) {
           });
         });
         j.map(data => data.StoppedTrip).forEach((each, index) => {
-          console.log(j);
           distanceArray.push({
             AverageSpeed: 0,
             Distance: 0,
@@ -207,18 +185,15 @@ function dragData(data) {
       }).then(() => {
         // We order the array by start time, puts array in correct order after join.
         const orderedArray = _.orderBy(distanceArray, ['StartTime'], ['asc']);
-        console.log(orderedArray);
         let startIndex;
         let endIndex;
         // We find where the trip starts and ends within the array.
         _.orderBy(orderedArray).forEach((each, index) => {
           if (time[0] >= each.StartTime && time[0] <= each.EndTime) {
             startIndex = index;
-            console.log(startIndex);
           }
           if (time[1] >= each.StartTime && time[1] <= each.EndTime) {
             endIndex = index;
-            console.log(endIndex);
           }
         });
 
@@ -227,22 +202,12 @@ function dragData(data) {
           distanceCount += each.Distance;
         });
 
-        console.log('these are the final values!!!!');
-        console.log(distanceCount);
-
         function getTheValues() {
-          console.log(time[0]);
-          console.log(time[1]);
-          console.log(slicedArray);
-          console.log(orderedArray);
           // || slicedArray.length === 0
           if (time[1] === 'MANUAL ENTRY') {
             return Promise.resolve('MANUAL ENTRY');
           }
-          return firstAndLast(time[0], time[1], slicedArray, orderedArray).then((data) => {
-            console.log(data);
-            return Promise.resolve(((distanceCount + data) * 1.03).toFixed(0));
-          });
+          return firstAndLast(time[0], time[1], slicedArray, orderedArray).then(data => Promise.resolve(((distanceCount + data) * 1.03).toFixed(0)));
         }
 
         return Promise.resolve(getTheValues());
@@ -257,13 +222,6 @@ function dragData(data) {
      * @return {type}  distance between site and quarry.
      * Code should use GPS API currently using google distance API...
      */
-    function getDistance(site) {
-      console.log(site);
-      return fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?units=metric&origins=-36.969591712031935,175.01331160311304&key=AIzaSyD3DrGL7mk0IXupL8BWqoq0pRofJdOeIBc&destinations=${coordinates[site].Position.Longitude},${coordinates[site].Position.Latitude}`).then(response =>
-        response.json()).then(j =>
-        parseDistance(j.rows[0].elements[0].distance.value) * 2);
-    }
-
     selectedDateArray.push(dateArray[_.findIndex(dateKeys, o => o[1] === date)]);
     const data = selectedDateArray[0][0];
 
@@ -282,25 +240,6 @@ function dragData(data) {
       const date = moment(time, 'HH:mm:ss');
       const roundedDate = round(date, moment.duration(15, 'minutes'), height);
       return Promise.resolve(roundedDate.format('hh:mm:ss A'));
-    }
-
-    /**
-     * parseDistance - Takes in raw distance
-     * and returns value with proper spacing.
-     * Should refactor...
-     * @param  {type} distance Raw distance
-     * @return {type} Distance with proper decimal.
-     */
-    function parseDistance(distance) {
-      const string = distance.toString();
-      if (string.length === 6) {
-        return `${string.substring(0, 3)}.${string.substring(3, 5)}`;
-      } else if (string.length === 5) {
-        return `${string.substring(0, 2)}.${string.substring(2, 4)}`;
-      } else if (string.length === 4) {
-        return `${string.substring(0, 1)}.${string.substring(1, 3)}`;
-      }
-      return 'Incorrect distance.';
     }
 
     /**
@@ -361,28 +300,14 @@ function dragData(data) {
 
     let dateCount = 0;
     selectedDateArray[currentCount].forEach((data, index) => {
-      console.log(getNextTime(data, index, currentCount, false));
-      console.log(dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, data['Time Out']));
-      console.log(dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, getNextTime(data, index, currentCount, false)));
-      console.log(getTripData(deviceId[data.Vehicle], `2018-${moment(date).format('MM-DD')}`, dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, data['Time Out']), dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, getNextTime(data, index, currentCount, false))));
       dateCount += 1;
       Promise.all([
-        getNextTime(data, index, currentCount, false),
-      ]).then((promise) => {
-        console.log(`time out: ${data['Time Out']} time back: ${promise[0]} vehicle: ${data.Vehicle}`);
-      });
-      Promise.all([
-        getDistance(data['Order Name'].substring(0, 4)),
+        getTripData(deviceId[data.Vehicle], `2018-${moment(date).format('MM-DD')}`, dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, data['Time Out']), dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, getNextTime(data, index, currentCount, false))),
         getNextTime(data, index, currentCount, true),
         roundTime(data['Time Out'], 'floor'),
         parseWeight(data.Net),
         productNameMatch(data['Product Name']),
-        getTripData(deviceId[data.Vehicle], `2018-${moment(date).format('MM-DD')}`, dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, data['Time Out']), dateTimeToUtc(`2018-${moment(date).format('MM-DD')}`, getNextTime(data, index, currentCount, false))),
       ]).then((promise) => {
-        console.log(deviceId[data.Vehicle]);
-        console.log(data);
-        console.log(`2018-${moment(date).format('MM-DD')}`);
-        console.log(moment.utc('2018-03-30T19:47:40.933').valueOf());
         dateArrayConverted.push({
           date,
           quarry: 'KB',
@@ -396,9 +321,10 @@ function dragData(data) {
           endTime: promise[1],
           startKm: 0,
           endKm: promise[0],
-          bhKM: promise[5],
         });
       }).then(() => {
+        // Function to calculate progress...
+        loadingCalculator();
         // When the array has been iterated through we trigger CSV export...
         if (selectedDateArray.length === currentCount + 1) {
           if (index + 1 === dateCount) {
@@ -423,7 +349,7 @@ function dragData(data) {
     /**
      * Instantiate Json2Csv and set headers via fields.
      */
-    const fields = ['date', 'quarry', 'docket', 'jobNo', 'delivery', 'rego', 'product', 'weight', 'startTime', 'endTime', 'startKm', 'endKm', 'bhKM'];
+    const fields = ['date', 'quarry', 'docket', 'jobNo', 'delivery', 'rego', 'product', 'weight', 'startTime', 'endTime', 'startKm', 'endKm'];
     const json2csvParser = new Json2csvParser({
       fields,
     });
@@ -435,7 +361,7 @@ function dragData(data) {
         throw err;
       } else {
         console.log('The file was saved!');
-        // After we have succesfully written our file we wipe data from our arrays.
+        // After we have succesfully written our file we pe data from our arrays.
         // Key showing start index for a date range and the date in format ['1', '3-Mar'].
         dateKeys = [];
         dateArray = [];

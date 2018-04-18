@@ -15,7 +15,7 @@
     color: white;
   }
 
-  .dragText {
+  #dragText {
     text-align: center;
     vertical-align: middle;
     line-height: 300px;
@@ -34,7 +34,7 @@
   <h1 class="header">EXCEL CONVERTER</h1>
   <div id="drag-file">
     <div id="drag-dotted">
-      <p class="dragText">Drag your files here...</p>
+      <p id="dragText">Drag your files here...</p>
     </div>
   </div>
 
@@ -59,7 +59,7 @@
         e.preventDefault();
 
         for (let f of e.dataTransfer.files) {
-          dragData(f.path)
+          dragData(f.path);
         }
 
         return false;
