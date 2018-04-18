@@ -163,7 +163,7 @@ function dragData(data) {
           token: '8B38AA6B-B91B-48D2-A203-0AEB570458F7',
         },
         method: 'GET',
-      }).then(response => response.json()).then(j =>
+      }).then(response => response.json()).then((j) => {
         j.map(data => data.TravelledTrip).forEach((each, index) => {
           console.log(j);
           j[index].TravelledTrip.WithinSpeed.forEach((each, index) => {
@@ -193,7 +193,18 @@ function dragData(data) {
               type: 'Off road',
             });
           });
-        })).then(() => {
+        });
+        j.map(data => data.StoppedTrip).forEach((each, index) => {
+          console.log(j);
+          distanceArray.push({
+            AverageSpeed: 0,
+            Distance: 0,
+            StartTime: each.StartTime,
+            EndTime: each.EndTime,
+            type: 'Stopped Trip',
+          });
+        });
+      }).then(() => {
         // We order the array by start time, puts array in correct order after join.
         const orderedArray = _.orderBy(distanceArray, ['StartTime'], ['asc']);
         console.log(orderedArray);
@@ -224,7 +235,8 @@ function dragData(data) {
           console.log(time[1]);
           console.log(slicedArray);
           console.log(orderedArray);
-          if (time[1] === 'MANUAL ENTRY' || slicedArray.length === 0) {
+          // || slicedArray.length === 0
+          if (time[1] === 'MANUAL ENTRY') {
             return Promise.resolve('MANUAL ENTRY');
           }
           return firstAndLast(time[0], time[1], slicedArray, orderedArray).then((data) => {
