@@ -114,6 +114,7 @@ function dragData(data) {
     // We slice the array to the correct start and end point.
     console.log('this is startTime', startTime);
     console.log('this is endTime', endTime);
+    console.log(slicedArray[0]);
     const startDif = moment(startTime);
     const endDif = moment(endTime);
 
@@ -221,20 +222,19 @@ function dragData(data) {
         function getTheValues() {
           console.log(time[0]);
           console.log(time[1]);
-          if (time[1] === 'MANUAL ENTRY') {
-            console.log('MANUAL ENTRY HITS 71804464');
-            return Promise.resolve('NO DATA');
+          console.log(slicedArray);
+          console.log(orderedArray);
+          if (time[1] === 'MANUAL ENTRY' || slicedArray.length === 0) {
+            return Promise.resolve('MANUAL ENTRY');
           }
           return firstAndLast(time[0], time[1], slicedArray, orderedArray).then((data) => {
             console.log(data);
-            return Promise.resolve((distanceCount + data).toFixed(2));
+            return Promise.resolve(((distanceCount + data) * 1.03).toFixed(0));
           });
         }
 
         return Promise.resolve(getTheValues());
-      }),
-      // return 'fuck js...';
-    );
+      }));
   }
 
 
